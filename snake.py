@@ -1,48 +1,82 @@
 import random, pygame, sys
 from pygame.locals import *
+
+#assign speed to the snake
 FPS = 15
-WINDOWWIDTH = 640
-WINDOWHEIGHT = 480
+
+#assign width to each cell and total window
+WINWIDTH = 640
+WINHEIGHT = 480
 CELLSIZE = 20
-assert WINDOWWIDTH % CELLSIZE == 0
-assert WINDOWHEIGHT % CELLSIZE == 0
-CELLWIDTH = int(WINDOWWIDTH / CELLSIZE)
-CELLHEIGHT = int(WINDOWHEIGHT / CELLSIZE)
-WHITE     = (255, 255, 255)
-BLACK     = (  0,   0,   0)
-RED       = (255,   0,   0)
-GREEN     = (  0, 255,   0)
+
+assert WINWIDTH % CELLSIZE == 0
+assert WINHEIGHT % CELLSIZE == 0
+
+#assign width to each cell
+CELLWIDTH = int(WINWIDTH / CELLSIZE)
+CELLHEIGHT = int(WINHEIGHT / CELLSIZE)
+
+#setting colors for further use
+WHITE = (255, 255, 255)
+BLACK = (  0,   0,   0)
+RED = (255,   0,   0)
+GREEN = (  0, 255,   0)
 DARKGREEN = (  0, 155,   0)
-DARKGRAY  = ( 40,  40,  40)
+DARKGRAY = ( 40,  40,  40)
+
+#set background color
 BGCOLOR = BLACK
+
+#set key directions
 UP = 'up'
 DOWN = 'down'
 LEFT = 'left'
 RIGHT = 'right'
 HEAD = 0
 
+
 def main():
+	#main loop for setting up stuff
 	global FPSCLOCK, DISPLAYSURF, BASICFONT
 	pygame.init()
+	
+	#set basic speed, display and font
 	FPSCLOCK = pygame.time.Clock()
-	DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
+	DISPLAYSURF = pygame.display.set_mode((WINWIDTH, WINHEIGHT))
 	BASICFONT = pygame.font.Font('freesansbold.ttf', 18)
+
+	#set caption
 	pygame.display.set_caption('Snake')
+	showhomeScreen()
+	
+	#loop for game
 	while True:
 		runGame()
+		gameOverScreen()
+
 
 def runGame():
+	# Set a random start point.
 	startx = random.randint(5, CELLWIDTH - 6)
 	starty = random.randint(5, CELLHEIGHT - 6)
-	wormCoords = [{'x': startx,     'y': starty},
+	
+	#set cordinates for snake
+	snakeCoords = [{'x': startx,     'y': starty},
 				  {'x': startx - 1, 'y': starty},
 				  {'x': startx - 2, 'y': starty}]
+	
+	#ser initial direction for snake
 	direction = RIGHT
-
+	
+	# Start the fruit in a random place.
+	fruit = getRandomLocation()
+	
 	while True:
-		for event in pygame.event.get(): # event handling loop
+		# main game loop
+		for event in pygame.event.get():
+			# event handling loop
 			if event.type == QUIT:
-				terminate()
+				endgameTer()
 			elif event.type == KEYDOWN:
 				if (event.key == K_LEFT or event.key == K_a) and direction != RIGHT:
 					direction = LEFT
@@ -53,43 +87,209 @@ def runGame():
 				elif (event.key == K_DOWN or event.key == K_s) and direction != UP:
 					direction = DOWN
 				elif event.key == K_ESCAPE:
-					terminate()
-
-		if wormCoords[HEAD]['x'] == -1 or wormCoords[HEAD]['x'] == CELLWIDTH or wormCoords[HEAD]['y'] == -1 or wormCoords[HEAD]['y'] == CELLHEIGHT:
+					endgameTer()
+		
+		# check if the snake has hit itself or the edge
+		if snakeCoords[HEAD]['x'] == -1 or snakeCoords[HEAD]['x'] == CELLWIDTH or snakeCoords[HEAD]['y'] == -1 or snakeCoords[HEAD]['y'] == CELLHEIGHT:
+			# game over
 			return
-		for wormBody in wormCoords[1:]:
-			if wormBody['x'] == wormCoords[HEAD]['x'] and wormBody['y'] == wormCoords[HEAD]['y']:
+		for snakeBody in snakeCoords[1:]:
+			if snakeBody['x'] == snakeCoords[HEAD]['x'] and snakeBody['y'] == snakeCoords[HEAD]['y']:
+				# game over
 				return
 		
-		del wormCoords[-1]
+		# check if snake has eaten a fruit
+		if snakeCoords[HEAD]['x'] == fruit['x'] and snakeCoords[HEAD]['y'] == fruit['y']:
+			# don't remove snake's tail segment
+			# set a new fruit somewhere
+			fruit = getRandomLocation()
+		else:
+			# remove snake's tail segment
+			del snakeCoords[-1]
 		
+		# move the snake by adding a segment in the direction it is moving
 		if direction == UP:
-			newHead = {'x': wormCoords[HEAD]['x'], 'y': wormCoords[HEAD]['y'] - 1}
+			newHead = {'x': snakeCoords[HEAD]['x'], 'y': snakeCoords[HEAD]['y'] - 1}
 		elif direction == DOWN:
-			newHead = {'x': wormCoords[HEAD]['x'], 'y': wormCoords[HEAD]['y'] + 1}
+			newHead = {'x': snakeCoords[HEAD]['x'], 'y': snakeCoords[HEAD]['y'] + 1}
 		elif direction == LEFT:
-			newHead = {'x': wormCoords[HEAD]['x'] - 1, 'y': wormCoords[HEAD]['y']}
+			newHead = {'x': snakeCoords[HEAD]['x'] - 1, 'y': snakeCoords[HEAD]['y']}
 		elif direction == RIGHT:
-			newHead = {'x': wormCoords[HEAD]['x'] + 1, 'y': wormCoords[HEAD]['y']}
-		wormCoords.insert(0, newHead)
+			newHead = {'x': snakeCoords[HEAD]['x'] + 1, 'y': snakeCoords[HEAD]['y']}
 		
+		#insert a new tail
+		snakeCoords.insert(0, newHead)
+		#change background for new cell
 		DISPLAYSURF.fill(BGCOLOR)
-		drawWorm(wormCoords)
+		
+		#make changes for new added cell
+		drawGrid()
+		drawsnake(snakeCoords)
+		
+		#make a new fruit
+		drawfruit(fruit)
+
+		#update score
+		writeScore(len(snakeCoords) - 3)
+		
+		#display updated score
 		pygame.display.update()
 		FPSCLOCK.tick(FPS)
 
-def terminate():
+
+def drawPressKeyMsg():
+	#dispay message on home screen
+	pressKeySurf = BASICFONT.render('Press a key to start playing.', True, DARKGRAY)
+	pressKeyRect = pressKeySurf.get_rect()
+	pressKeyRect.topleft = (WINWIDTH - 200, WINHEIGHT - 30)
+	DISPLAYSURF.blit(pressKeySurf, pressKeyRect)
+
+
+def checkForKeyPress():
+	if len(pygame.event.get(QUIT)) > 0:
+		endgameTer()
+	
+	keyUpEvents = pygame.event.get(KEYUP)
+	
+	if len(keyUpEvents) == 0:
+		return None
+	if keyUpEvents[0].key == K_ESCAPE:
+		endgameTer()
+	
+	return keyUpEvents[0].key
+
+
+def showhomeScreen():
+	#show home screen
+	titleFont = pygame.font.Font('freesansbold.ttf', 100)
+	
+	#set text
+	titleSurf1 = titleFont.render('Snake!', True, WHITE, DARKGREEN)
+	titleSurf2 = titleFont.render('Snake!', True, GREEN)
+	
+	#set initial rotation for text
+	degrees1 = 0
+	degrees2 = 0
+	
+	while True:
+		#text 1
+		DISPLAYSURF.fill(BGCOLOR)
+		rotatedSurf1 = pygame.transform.rotate(titleSurf1, degrees1)
+		rotatedRect1 = rotatedSurf1.get_rect()
+		rotatedRect1.center = (WINWIDTH / 2, WINHEIGHT / 2)
+		
+		#text 2
+		DISPLAYSURF.blit(rotatedSurf1, rotatedRect1)
+		rotatedSurf2 = pygame.transform.rotate(titleSurf2, degrees2)
+		rotatedRect2 = rotatedSurf2.get_rect()
+		rotatedRect2.center = (WINWIDTH / 2, WINHEIGHT / 2)
+		
+		#rotate text
+		DISPLAYSURF.blit(rotatedSurf2, rotatedRect2)
+		drawPressKeyMsg()
+		
+		if checkForKeyPress():
+			# clear event queue
+			pygame.event.get()
+			# endgame
+			return
+		
+		pygame.display.update()
+		FPSCLOCK.tick(FPS)
+		
+		# rotate by 3 degrees each frame
+		degrees1 += 3
+		# rotate by 7 degrees each frame
+		degrees2 += 7
+
+
+def endgameTer():
+	#quit when exit
 	pygame.quit()
 	sys.exit()
 
-def drawWorm(wormCoords):
-	for coord in wormCoords:
+
+def getRandomLocation():
+	return {'x': random.randint(0, CELLWIDTH - 1), 'y': random.randint(0, CELLHEIGHT - 1)}
+
+
+def gameOverScreen():
+	#display final game over screen and text
+	gameOverFont = pygame.font.Font('freesansbold.ttf', 150)
+	gameSurf = gameOverFont.render('Game', True, WHITE)
+	overSurf = gameOverFont.render('Over', True, WHITE)
+	gameRect = gameSurf.get_rect()
+	overRect = overSurf.get_rect()
+	
+	#set position of text
+	gameRect.midtop = (WINWIDTH / 2, 10)
+	overRect.midtop = (WINWIDTH / 2, gameRect.height + 10 + 25)
+	
+	#disply over the main screen
+	DISPLAYSURF.blit(gameSurf, gameRect)
+	DISPLAYSURF.blit(overSurf, overRect)
+	
+	#check for key press
+	drawPressKeyMsg()
+
+	#update and display changes
+	pygame.display.update()
+	pygame.time.wait(500)
+	
+	# clear out any key presses in the event queue
+	checkForKeyPress()
+	
+	while True:
+		if checkForKeyPress():
+			# clear event queue
+			pygame.event.get()
+			#endgame
+			return
+
+
+def writeScore(score):
+	#write score on screen
+	scoreSurf = BASICFONT.render('Score: %s' % (score), True, WHITE)
+	scoreRect = scoreSurf.get_rect()
+
+	#set position
+	scoreRect.topleft = (WINWIDTH - 120, 10)
+	DISPLAYSURF.blit(scoreSurf, scoreRect)
+
+
+def drawsnake(snakeCoords):
+	for coord in snakeCoords:
+		#set cordinated for new cell
 		x = coord['x'] * CELLSIZE
 		y = coord['y'] * CELLSIZE
-		wormSegmentRect = pygame.Rect(x, y, CELLSIZE, CELLSIZE)
-		pygame.draw.rect(DISPLAYSURF, DARKGREEN, wormSegmentRect)
-		wormInnerSegmentRect = pygame.Rect(x + 4, y + 4, CELLSIZE - 8, CELLSIZE - 8)
-		pygame.draw.rect(DISPLAYSURF, GREEN, wormInnerSegmentRect)
+		
+		#add new segment
+		snakeSegmentRect = pygame.Rect(x, y, CELLSIZE, CELLSIZE)
+		pygame.draw.rect(DISPLAYSURF, DARKGREEN, snakeSegmentRect)
+		
+		#change inner color of snake
+		snakeInnerSegmentRect = pygame.Rect(x + 4, y + 4, CELLSIZE - 8, CELLSIZE - 8)
+		pygame.draw.rect(DISPLAYSURF, GREEN, snakeInnerSegmentRect)
+
+
+def drawfruit(coord):
+	#get cordinated of fruit
+	x = coord['x'] * CELLSIZE
+	y = coord['y'] * CELLSIZE
+
+	#Add new color to fruit
+	fruitRect = pygame.Rect(x, y, CELLSIZE, CELLSIZE)
+	pygame.draw.rect(DISPLAYSURF, RED, fruitRect)
+
+
+def drawGrid():
+	for x in range(0, WINWIDTH, CELLSIZE):
+		# draw vertical lines
+		pygame.draw.line(DISPLAYSURF, DARKGRAY, (x, 0), (x, WINHEIGHT))
+	for y in range(0, WINHEIGHT, CELLSIZE):
+		# draw horizontal lines
+		pygame.draw.line(DISPLAYSURF, DARKGRAY, (0, y), (WINWIDTH, y))
+
 
 if __name__ == '__main__':
 	main()
