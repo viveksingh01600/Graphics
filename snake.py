@@ -145,6 +145,24 @@ def drawPressKeyMsg():
 	DISPLAYSURF.blit(pressKeySurf, pressKeyRect)
 
 
+def collision_with_boundaries(snake_head):
+	if snake_head[0]>=500 or snake_head[0]<0 or snake_head[1]>=500 or snake_head[1]<0 :
+		#gamaend
+		return 1
+	else:
+		#game end
+		return 0
+ 
+def collision_with_self(snake_position):
+	snake_head = snake_position[0]
+	if snake_head in snake_position[1:]:
+		#game end
+		return 1
+	else:
+		#game end
+		return 0
+
+
 def checkForKeyPress():
 	if len(pygame.event.get(QUIT)) > 0:
 		endgameTer()
@@ -157,6 +175,27 @@ def checkForKeyPress():
 		endgameTer()
 	
 	return keyUpEvents[0].key
+
+
+def display_final_score(display_text, final_score):
+	largeText = pygame.font.Font('freesansbold.ttf',35)
+	TextSurf = largeText.render(display_text, True, BLACK)
+	TextRect = TextSurf.get_rect()
+	TextRect.center = ((display_width/2),(display_height/2))
+	display.blit(TextSurf, TextRect)
+	pygame.display.update()
+	time.sleep(2)
+
+
+def collision_with_apple(apple_position, score):
+	fruit_position = [random.randrange(1,50)*10,random.randrange(1,50)*10]
+	score += 1
+	return apple_position, score
+	
+	#collission
+	if snake_head == apple_position:
+		apple_position, score = collision_with_apple(apple_position, score)
+		snake_position.insert(0,list(snake_head))
 
 
 def showhomeScreen():
@@ -207,6 +246,14 @@ def endgameTer():
 	#quit when exit
 	pygame.quit()
 	sys.exit()
+
+
+def display_snake(snake_position):
+    for position in snake_position:
+        pygame.draw.rect(display,red,pygame.Rect(position[0],position[1],10,10))
+ 
+def display_apple(display,apple_position, apple):
+    display.blit(apple,(apple_position[0], apple_position[1]))
 
 
 def getRandomLocation():
